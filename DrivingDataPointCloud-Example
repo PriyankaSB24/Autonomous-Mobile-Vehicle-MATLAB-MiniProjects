@@ -1,0 +1,169 @@
+baseDownloadURL = 'https://github.com/mathworks/udacity-self-driving-data-subset/raw/master/drive_segment_11_18_16/';
+dataFolder      = fullfile(tempdir, 'drive_segment_11_18_16', filesep);
+options         = weboptions('Timeout', Inf);
+
+lidarFileName = dataFolder + "lidarPointClouds.mat";
+imuFileName   = dataFolder + "imuOrientations.mat";
+gpsFileName   = dataFolder + "gpsSequence.mat";
+
+folderExists  = exist(dataFolder, 'dir');
+matfilesExist = exist(lidarFileName, 'file') && exist(imuFileName, 'file') ...
+    && exist(gpsFileName, 'file');
+
+
+if ~folderExists
+    mkdir(dataFolder);
+end
+
+if ~matfilesExist
+    websave(lidarFileName, baseDownloadURL + "lidarPointClouds.mat", options);
+    websave(imuFileName, baseDownloadURL + "imuOrientations.mat", options);
+    websave(gpsFileName, baseDownloadURL + "gpsSequence.mat", options);
+end
+
+
+% Load lidar data from MAT-file
+data = load(lidarFileName);
+lidarPointClouds = data.lidarPointClouds;
+
+% Display first few rows of lidar data
+%head(lidarPointClouds)
+
+%Load GPS sequence from MAT-file
+data = load(gpsFileName);
+gpsSequence = data.gpsSequence;
+
+% Display first few rows of GPS data
+head(gpsSequence)
+
+
+% Load IMU recordings from MAT-file
+data = load(imuFileName);
+imuOrientations = data.imuOrientations;
+
+% Convert IMU recordings to quaternion type
+imuOrientations = convertvars(imuOrientations, 'Orientation', 'quaternion');
+
+% Display first few rows of IMU data
+head(imuOrientations)
+
+
+
+
+lidarFrameDuration = median(diff(lidarPointClouds.Time));
+gpsFrameDuration   = median(diff(gpsSequence.Time));
+imuFrameDuration   = median(diff(imuOrientations.Time));
+
+% Adjust display format to seconds
+lidarFrameDuration.Format = 's';
+gpsFrameDuration.Format   = 's';
+imuFrameDuration.Format   = 's';
+
+% Compute frame rates
+lidarRate = 1/seconds(lidarFrameDuration);
+gpsRate   = 1/seconds(gpsFrameDuration);
+imuRate   = 1/seconds(imuFrameDuration);
+
+% Display frame durations and rates
+fprintf('Lidar: %s, %3.1f Hz\n', char(lidarFrameDuration), lidarRate);
+fprintf('GPS  : %s, %3.1f Hz\n', char(gpsFrameDuration), gpsRate);
+fprintf('IMU  : %s, %3.1f Hz\n', char(imuFrameDuration), imuRate);
+
+
+
+% Create a geoplayer to visualize streaming geographic coordinates
+latCenter = gpsSequence.Latitude(1);
+lonCenter = gpsSequence.Longitude(1);
+zoomLevel = 17;
+
+gpsPlayer = geoplayer(latCenter, lonCenter, zoomLevel);
+
+% Plot the full route
+plotRoute(gpsPlayer, gpsSequence.Latitude, gpsSequence.Longitude);
+
+% Determine limits for the player
+xlimits = [-45 45]; % meters
+ylimits = [-45 45];
+zlimits = [-10 20];
+
+% Create a pcplayer to visualize streaming point clouds from lidar sensor
+lidarPlayer = pcplayer(xlimits, ylimits, zlimits);
+
+% Customize player axes labels
+xlabel(lidarPlayer.Axes, 'X (m)')
+ylabel(lidarPlayer.Axes, 'Y (m)')
+zlabel(lidarPlayer.Axes, 'Z (m)')
+
+title(lidarPlayer.Axes, 'Lidar Sensor Data')
+
+% Align players on screen
+helperAlignPlayers({gpsPlayer, lidarPlayer});
+
+% Outer loop over GPS readings (slower signal)
+for g = 1 : height(gpsSequence)-1
+
+    % Extract geographic coordinates from timetable
+    latitude  = gpsSequence.Latitude(g);
+    longitude = gpsSequence.Longitude(g);
+
+    % Update current position in GPS display
+    plotPosition(gpsPlayer, latitude, longitude);
+
+    % Compute the time span between the current and next GPS reading
+    timeSpan = timerange(gpsSequence.Time(g), gpsSequence.Time(g+1));
+
+    % Extract the lidar frames recorded during this time span
+    lidarFrames = lidarPointClouds(timeSpan, :);
+
+    % Inner loop over lidar readings (faster signal)
+    for l = 1 : height(lidarFrames)
+
+        % Extract point cloud
+        ptCloud = lidarFrames.PointCloud(l);
+
+        % Update lidar display
+        view(lidarPlayer, ptCloud);
+
+        % Pause to slow down the display
+        pause(0.01)
+    end
+end
+
+function helperAlignPlayers(players)
+
+validateattributes(players, {'cell'}, {'vector'});
+
+hasAxes = cellfun(@(p)isprop(p,'Axes'),players,'UniformOutput', true);
+if ~all(hasAxes)
+    error('Expected all viewers to have an Axes property');
+end
+
+screenSize   = get(groot, 'ScreenSize');
+screenMargin = [50, 100];
+
+playerSizes = cellfun(@getPlayerSize, players, 'UniformOutput', false);
+playerSizes = cell2mat(playerSizes);
+
+maxHeightInSet = max(playerSizes(1:3:end));
+
+% Arrange players vertically so that the tallest player is 100 pixels from
+% the top.
+location = round([screenMargin(1), screenSize(4)-screenMargin(2)-maxHeightInSet]);
+for n = 1 : numel(players)
+    player = players{n};
+
+    hFig = ancestor(player.Axes, 'figure');
+    hFig.OuterPosition(1:2) = location;
+
+    % Set up next location by going right
+    location = location + [50+hFig.OuterPosition(3), 0];
+end
+
+    function sz = getPlayerSize(viewer)
+
+        % Get the parent figure container
+        h = ancestor(viewer.Axes, 'figure');
+
+        sz = h.OuterPosition(3:4);
+    end
+end
