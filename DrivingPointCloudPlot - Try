@@ -1,0 +1,86 @@
+% File
+baseDownloadURL = 'https://github.com/mathworks/udacity-self-driving-data-subset/raw/master/drive_segment_11_18_16/';
+dataFolder      = fullfile(tempdir, 'drive_segment_11_18_16', filesep);
+
+lidarFileName = dataFolder + "lidarPointClouds.mat";
+imuFileName   = dataFolder + "imuOrientations.mat";
+gpsFileName   = dataFolder + "gpsSequence.mat";
+
+% Load lidar data from MAT-file
+data = load(lidarFileName);
+lidarPointClouds = data.lidarPointClouds;
+
+head(lidarPointClouds)
+
+%Load GPS sequence from MAT-file
+data = load(gpsFileName);
+gpsSequence = data.gpsSequence;
+
+head(gpsSequence)
+
+% Load IMU, which is a robot positioning system
+data = load(imuFileName);
+imuOrientations = data.imuOrientations;
+
+% Convert IMU recordings to quaternion, like complex numbers 
+imuOrientations = convertvars(imuOrientations, 'Orientation', ...
+    'quaternion');
+
+% geoplayer
+latCenter = gpsSequence.Latitude(1);
+lonCenter = gpsSequence.Longitude(1);
+zoomLevel = 17;
+%gpsPlayer = geoplayer(latCenter, lonCenter, zoomLevel);
+%plotRoute(gpsPlayer, gpsSequence.Latitude, gpsSequence.Longitude);
+
+% set axes and length of axes to graph the Lidar point clouds using 
+%pcplayer
+lidarPlayer = pcplayer( [-45 45], [-45 45], [-10 20]);
+title(lidarPlayer.Axes, 'Lidar Point Cloud Graph - Driving in Roads')
+
+% use given align players function 
+helperAlignPlayers({gpsPlayer, lidarPlayer});
+
+% loop over the gps sequence to graph all gps 
+for j = 1 : height(gpsSequence)-1
+    % get lat and long from the table
+    % change the position of gps map
+    plotPosition(gpsPlayer, gpsSequence.Latitude(j), gpsSequence.Longitude(j));
+    
+    % Get time between GPS readings
+    timeSpan = timerange(gpsSequence.Time(j), gpsSequence.Time(j+1));
+    % Get lidar which was recorded in that time
+    lidarFrames = lidarPointClouds(timeSpan, :);
+
+    % loop over lidar signals
+    for k = 1 : height(lidarFrames)
+        % Get point cloud and update the graph
+        view(lidarPlayer, lidarFrames.PointCloud(k));
+        % too fast.... delay here 
+    end
+end
+
+% given function, did not write
+function helperAlignPlayers(players)
+validateattributes(players, {'cell'}, {'vector'});
+hasAxes = cellfun(@(p)isprop(p,'Axes'),players,'UniformOutput', true);
+if ~all(hasAxes)
+    error('Expected all viewers to have an Axes property');
+end
+screenSize   = get(groot, 'ScreenSize');
+screenMargin = [50, 100];
+playerSizes = cellfun(@getPlayerSize, players, 'UniformOutput', false);
+playerSizes = cell2mat(playerSizes);
+maxHeightInSet = max(playerSizes(1:3:end));
+location = round([screenMargin(1), screenSize(4)-screenMargin(2)-maxHeightInSet]);
+for n = 1 : numel(players)
+    player = players{n};
+    hFig = ancestor(player.Axes, 'figure');
+    hFig.OuterPosition(1:2) = location;
+    location = location + [50+hFig.OuterPosition(3), 0];
+end
+    function sz = getPlayerSize(viewer)
+        h = ancestor(viewer.Axes, 'figure');
+        sz = h.OuterPosition(3:4);
+    end
+end
