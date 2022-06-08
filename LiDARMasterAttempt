@@ -1,0 +1,80 @@
+% file has all data from lidar scans
+load('offlineSlamData.mat');
+
+% liderslam object automatically performs slam for a sensor reading, given the range and resolution of the map
+slamAlg = lidarSLAM(mapResolution, maxLidarRange);
+
+% loop closure happens to 'tighten' the model and prevent discrepencies between actual location and calculated location
+% higher tershold = better closing of the loop
+slamAlg.LoopClosureThreshold = 210;  
+% when the closure process starts, within 8 m of start
+slamAlg.LoopClosureSearchRadius = 8;
+
+% adding 10 scans itertively to the slamAlg object, based on the distances between the nodes
+for i=1:10
+    % command automatically determines if scan is accepted
+    [isScanAccepted, loopClosureInfo, optimizationInfo] = addScan(slamAlg, scans{i});
+    if isScanAccepted
+        fprintf('Added scan %d \n', i);
+    end
+end
+
+% plot the map without loop closure, observe how parts are tilted like video # 3
+figure;
+show(slamAlg);
+title({'Map','Pose Graph without Closure'});
+
+% set that the first time, the loop isn't closed
+firstTimeLCDetected = false;
+
+% create another figure
+figure;
+% get each scan again (like before)
+for i=10:length(scans)
+    % loop closure detected automatically, optimization performed based on
+    % that
+    [isScanAccepted, loopClosureInfo, optimizationInfo] = addScan(slamAlg, scans{i});
+    if ~isScanAccepted
+        continue;
+    end
+    % IsPerformed boolean says if pose graph optimization has been performed
+    % if the point cloud had Pose graph optimization and no first loop closure
+    % this graphs the optimization and pre-closure and post-closure on the same
+    % graph to see how loop closure affects data
+    if optimizationInfo.IsPerformed && ~firstTimeLCDetected
+        % Poses, off -> does not show the vector pose values of any nodes
+          show(slamAlg, 'Poses', 'off');
+        % show(slamAlg, 'IDs', 'loopclosures');
+        % keeps the current values in the graph
+        hold on;
+        % graph the Pose graph
+        show(slamAlg.PoseGraph); 
+        % clears before adding new points
+        hold off;
+        % reset 
+        firstTimeLCDetected = true;
+        % updates the figure to show latest
+        drawnow
+    end
+end
+title('First loop closure - With and without');
+
+
+% build final occupancy map
+% black is sure borders, white is sure open areas, gray is unsure 
+[scans, optimizedPoses]  = scansAndPoses(slamAlg);
+% build a map using the optimized scan, the most optimized velocity &
+% orientation data(unnecessary data stripped), a map with a resolution of 20 cells per meter,
+% a max lidar range of 8m, meaning that is how accurate it is
+map = buildMap(scans, optimizedPoses, mapResolution, maxLidarRange);
+
+% update a figure
+figure; 
+show(map);
+% keeps the current values in the graph
+hold on
+% Poses, off -> does not show the vector pose values of any nodes
+show(slamAlg.PoseGraph, 'IDs', 'off');
+% clears before adding new points
+hold off
+title('Occupancy Map Built Using Lidar SLAM');
