@@ -1,7 +1,7 @@
 %%
 % Priyanka Supraja Balaji
 % June 2022
-% Building Occupancy Maps from Laser Scan Data (Illustrates Loop Closures and Pose Graph Optimization)
+% Building Occupancy Maps from LiDAR Scan Data (Illustrates Loop Closures and Pose Graph Optimization)
 %%
 
 % file has all data from lidar scans
