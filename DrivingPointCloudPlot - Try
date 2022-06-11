@@ -1,3 +1,9 @@
+%%
+% Priyanka Supraja Balaji
+% June 2022
+% Creating Point Cloud plots for moving vehicles in dynamic road environments from LiDAR data, GPS data, and IMU data 
+%%
+
 % File
 baseDownloadURL = 'https://github.com/mathworks/udacity-self-driving-data-subset/raw/master/drive_segment_11_18_16/';
 dataFolder      = fullfile(tempdir, 'drive_segment_11_18_16', filesep);
