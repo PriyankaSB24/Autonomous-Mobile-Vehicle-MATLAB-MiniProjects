@@ -5,6 +5,11 @@ Each of the files are a mini-projects about autonomous vehicles principles such 
 # LiDARDataOccupancyMap
 
 This mini project creates occupancy maps from LiDAR scan data provided by the SLAM MATLAB toolbox. The project uses LiDAR scan data from an autonomous vehicle navigating a building, to create simultaneous maps(SLAM) as the data from the scans are processed. Output includes graphs of improvement in generated maps post-algorithms such as loop closures and pose graph optimization. The generated map is used to build a final occupancy map, which illustrates the predicted map of the building. 
+<img width="749" alt="Screen Shot 2022-06-11 at 4 56 03 PM" src="https://user-images.githubusercontent.com/71840701/173204616-71132ce6-4d38-4335-a8cc-c0535f377ca8.png">
+<img width="750" alt="Screen Shot 2022-06-11 at 4 55 48 PM" src="https://user-images.githubusercontent.com/71840701/173204619-3e170b26-8573-4ad9-80a0-9be87d67586b.png">
+<img width="753" alt="Screen Shot 2022-06-11 at 4 55 17 PM" src="https://user-images.githubusercontent.com/71840701/173204621-6f6e680e-afb2-4dc0-8d53-b9137de23693.png">
+
+
 
 # DrivingPointCloudPlot
 
