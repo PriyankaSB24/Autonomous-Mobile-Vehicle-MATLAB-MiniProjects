@@ -1,0 +1,139 @@
+% Set up all the imports necessary
+pl3 = py.importlib.import_module('PyLidar3');
+np = py.importlib.import_module('numpy');
+plt = py.importlib.import_module('matplotlib');
+
+% Establish a connection
+port = 'com4';
+Obj = pl3.YdLidarG4(port);
+connect = Obj.Connect();
+
+    % Get the data from a gen and set number of scans
+    gen = Obj.StartScanning();
+    numScans = 100;
+    
+    % create a scans cell array which can store numScans scan data
+    scans = cell(numScans,1);
+    
+    % initialize angle and dist
+    angle = [];
+    dist = [];
+    a = [];
+    d = [];
+    degRadConversion = double(3.1415926535/180);
+    
+    % get 30 pieces of data
+    for i=1 : numScans
+        s = py.next(gen);
+        strScan = convertCharsToStrings(s.char);
+
+        d = pyrunfile('SubstringFunction.py', "distance", j = strScan);
+        a = pyrunfile('DistancePythonFunction.py', "angle");
+        
+      
+        % angle conversion and into array
+        angle = [0];
+        for j=2:360 
+            xCoord = double(a{1, j});
+            xCoord = times(double(xCoord), double(3.1415926535/180));
+            angle = [angle, xCoord];
+        end
+
+        % dist into array
+        dist = [double(d{1, 1}) / double(1000)];
+        for k=2:360 
+            yCoord = double(d{1, k});
+            yCoord = double(yCoord) / double(1000);
+            dist = [dist, yCoord];
+        end
+    
+        % create a lidarScan object for the given data, add to scans
+        singleScan = lidarScan(dist, angle);
+        scans{i} = singleScan;
+        pause(0.1);
+
+        %map
+        plotScan = lidarScan(dist, angle);
+        plotScan = removeInvalidData(plotScan);
+        plot(plotScan)
+        refreshdata
+        drawnow
+
+        clear singleScan;
+        clear angle;
+        clear dist;
+        clear a;
+        clear d;
+    end
+        
+    % slam
+    disp("Started SLAM")
+    maxLidarRange = 14;
+    mapResolution = 80;
+    
+    % liderslam object automatically performs slam for a sensor reading, given the range and resolution of the map
+    slamAlg = lidarSLAM(20, 8);
+    
+    % loop closure happens to 'tighten' the model and prevent discrepencies between actual location and calculated location
+    % higher tershold = better closing of the loop
+    slamAlg.LoopClosureThreshold = 210;  
+    % when the closure process starts, within 8 m of start
+    slamAlg.LoopClosureSearchRadius = 2;
+    
+    % adding all scans itertively to the slamAlg object, based on the distances between the nodes
+    for i=1:numScans
+        % command automatically determines if scan is accepted
+        [isScanAccepted, loopClosureInfo, optimizationInfo] = addScan(slamAlg, scans{i});
+        if isScanAccepted
+            fprintf('Added scan %d \n', i);
+        end
+    end
+    
+    % plot the map without loop closure, observe how parts are tilted like video # 3
+    figure;
+    show(slamAlg);
+    title({'Basic Environment Map','Pose Graph without Closure'});
+
+    disp("Pose graph without closure over")
+
+    
+    firstTimeLCDetected = false;
+    
+    figure;
+    for i=10:length(scans)
+        [isScanAccepted, loopClosureInfo, optimizationInfo] = addScan(slamAlg, scans{i});
+        if ~isScanAccepted
+            continue;
+        end
+        % visualize the first detected loop closure, if you want to see the
+        % complete map building process, remove the if condition below
+        if optimizationInfo.IsPerformed && ~firstTimeLCDetected
+            show(slamAlg, 'Poses', 'off');
+            hold on;
+            show(slamAlg.PoseGraph); 
+            hold off;
+            firstTimeLCDetected = true;
+            drawnow
+        end
+    end
+    title('First loop closure Map');
+    disp("first loop closure with without over")
+    
+    figure
+    show(slamAlg);
+    title({'Final Map of Environment', 'Includes Robot trajectory'});
+    
+    figure; 
+    show(map);
+    hold on
+    show(slamAlg.PoseGraph, 'IDs', 'off');
+    hold off
+    title('Occupancy Map - Lidar SLAM');
+
+
+    disp("occ map over")
+
+    % stop scanning
+    Obj.StopScanning()
+
+
