@@ -1,0 +1,21 @@
+# def find_nth(bigStr, subStr, n):
+#     start = bigStr.find(subStr)
+#     while start >= 0 and n > 1:
+#         start = bigStr.find(subStr, start+len(subStr))
+#         n -= 1
+#     return start
+ 
+# z = find_nth( theString, sub, nth)
+
+def getAngleDist(info, 
+    info = info.replace("{","");
+    info = info.replace("}","");
+    info = info + ",";
+
+    for i in range(360):
+        data.append(int(i));
+        searcher = str("" + str(i) + ":");
+        numInd = int(info.find(searcher));
+        index = numInd + len(searcher) + 1; # where the distance number starts
+        comma = find_nth(info, ",", i+1);
+        data.append(int(info[index:comma]))
