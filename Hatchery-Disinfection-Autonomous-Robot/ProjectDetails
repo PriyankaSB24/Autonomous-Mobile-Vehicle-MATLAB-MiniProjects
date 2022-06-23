@@ -1,0 +1,32 @@
+#A Floor UV Disinfection Robot Design for the Keweenaw Bay Indian Community Fish Hatchery  
+
+###### Hatchery Needs and Robot Capabilities
+
+##### Robot Functionality
+SLAM:
+Robot drives autonomously using SLAM with input from LiDAR and Intel Depth Camera D435 for navigation
+Store the layout information of the hatchery to save time but continue to use SLAM each time the robot is sent in the clean in case input from the sensors is faulty
+
+Far-UVC Disinfection:
+The robot will have two Krypton Chloride Far-UVC excimer lamps that emit radiation at about 222 nm to disinfect the hatchery
+We must ensure that harmful wavelengths, such as those above 230 nm, are filtered out so as not to any humans or fish
+Study the effects of the radiation on both bacteria collected from the hatchery and human cells to ensure that the bacteria can be eliminated without harming anyone
+
+Robot Design Elements:
+Small in length and width in order to easily turn, corner, and traverse the hatchery
+Short enough to easily drive under the fish tanks and have a low center of gravity that ensures stability
+Rectangular drivetrain with four wheels made of rubber to prevent slipping, facilitate normal functioning if water is present on the floor, and easily drive over the drains
+Two Krypton Chloride Far-UVC excimer lamps with lengths that are approximately equivalent to the width of the robot because they will be oriented horizontally to the ground and along the front side of the robot
+A scissor lift with one of the UVC bars attached to it so that it can be raised and lowered to clean along the walls
+Two tiers, with the upper level dedicated entirely to the scissor lift, and the lower level for storing all remaining components so as not to interfere with the movement of the scissor lift
+The second UVC bar will be affixed to the front of the lower tier
+The heavier components will be located toward the backside on the first tier to achieve a weight distribution that will prevent the robot from falling over when the scissor lift is fully raised
+
+Areas for Disinfection:
+Main room of the hatchery
+Backroom storing the fish eggs
+Walls up to **insert height here** m
+Entryway?
+Hallway leading to fish egg room?
+Around the foot baths?
+
